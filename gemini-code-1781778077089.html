@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>근골격계 유해요인 통합 멀티 공정 조사 시스템</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#212529">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f1f3f5; font-size: 14px; color: #333; }
+        .card { box-shadow: 0 4px 10px rgba(0,0,0,0.06); border: none; border-radius: 12px; margin-bottom: 20px; }
+        .nav-pills .nav-link { font-weight: bold; padding: 12px; border-radius: 8px; color: #555; background: #e9ecef; margin-right: 5px; }
+        .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
+        .process-master-card { border-left: 6px solid #0d6efd; background: #ffffff; }
+        .process-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 14px 20px; border-radius: 8px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .task-investigate-card { border-top: 4px solid #198754; background: #ffffff; }
+        .result-box { background-color: #fff3cd; border: 1px solid #ffeba2; border-radius: 8px; padding: 12px; }
+        .media-preview-container { position: relative; margin-top: 10px; display: none; background: #000; border-radius: 8px; overflow: hidden; }
+        .preview-media { width: 100%; max-height: 180px; object-fit: contain; display: block; }
+        .delete-media-btn { position: absolute; top: 5px; right: 5px; background: rgba(220, 53, 69, 0.9); color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container my-4" style="max-width: 1000px;">
+    <div class="card p-3 bg-dark text-white text-center mb-4">
+        <h3 class="mb-1 fw-bold text-info">근골격계 유해요인 멀티 공정 조사 시스템</h3>
+        <p class="mb-0 text-white-50">태블릿 앱(PWA) 버전 · 카메라 직찍 · 부담작업 자동 판정</p>
+    </div>
+
+    <ul class="nav nav-pills nav-justified mb-4" id="surveyTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button">Step 1. 조사 대상 공정 목록 구성</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button">Step 2. 공정별 단위작업 빌드</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3" type="button">Step 3. 종합 정량 조사 & 판정</button>
+        </li>
+    </ul>
+
+    <div class="card p-3 mb-3 bg-white border">
+        <div class="row g-2">
+            <div class="col-6 col-md-4">
+                <label class="form-label small fw-bold">통합 조사일자</label>
+                <input type="date" id="masterDate" class="form-control form-control-sm">
+            </div>
+            <div class="col-6 col-md-4">
+                <label class="form-label small fw-bold">조사자 (인터뷰어)</label>
+                <input type="text" id="masterInspector" class="form-control form-control-sm" placeholder="조사자 이름">
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="surveyTabsContent">
+        
+        <div class="tab-pane fade show active" id="step1">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-secondary mb-0">🏢 오늘 조사할 공정들을 추가하세요</h5>
+                <button type="button" class="btn btn-primary fw-bold btn-sm" onclick="addProcessBlock()">+ 새 공정 추가</button>
+            </div>
+            <div id="processMasterContainer"></div>
+            <div class="text-end mt-4">
+                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="switchTab('step2-tab')">다음 단계로 ➔</button>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="step2">
+            <div class="card p-4">
+                <h5 class="fw-bold text-dark mb-2">📋 공정별 업무 흐름(단위작업) 받아적기</h5>
+                <p class="text-muted small">공정명을 터치하면 해당 공정의 단위작업을 입력할 수 있는 창이 아래로 열립니다.</p>
+                <hr>
+                <div id="processTasksContainer"></div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-secondary px-4" onclick="switchTab('step1-tab')">이전 단계</button>
+                    <button type="button" class="btn btn-primary px-4 fw-bold" onclick="switchTab('step3-tab')">다음 단계로 ➔</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="step3">
+            <div id="finalInvestigationContainer"></div>
+            <div class="card p-3 bg-light">
+                <div class="row g-2 justify-content-center">
+                    <div class="col-6 col-sm-4">
+                        <button type="button" class="btn btn-success w-100 py-3 fw-bold fs-5" onclick="exportData('download')">📥 데이터 (JSON) 다운로드</button>
+                    </div>
+                    <div class="col-6 col-sm-4">
+                        <button type="button" class="btn btn-info text-white w-100 py-3 fw-bold fs-5" onclick="exportData('email')">✉️ 통합 결과 이메일 전송</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // PWA 서비스 워커 등록 스크립트
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('PWA Service Worker 등록 성공:', reg.scope))
+                .catch(err => console.log('PWA Service Worker 등록 실패:', err));
+        });
+    }
+
+    document.getElementById('masterDate').value = new Date().toISOString().substring(0, 10);
+    let processIdx = 0;
+    const burdenDefinitions = {
+        1: "1호: 하루 4시간 이상 부적절 자세", 2: "2호: 하루 2시간 이상 관절 되풀이 사용",
+        3: "3호: 하루 2시간 이상 손가락 정밀 반복", 4: "4호: 하루 4시간 이상 머리 위 작업/팔 뻗기",
+        5: "5호: 하루 2시간 이상 목/상체 숙임·비틀기", 6: "6호: 하루 2시간 이상 쪼그려앉기/무릎꿇기",
+        7: "7호: 하루 2시간 이상 지지 없이 상체 숙임", 8: "8호: 하루 2시간 이상 5kg 이상 물체 리프팅",
+        9: "9호: 하루 2시간 이상 물체 밀거나 당기기", 10: "10호: 하루 2시간 이상 진동/충격 공구 사용",
+        11: "11호: 하루 10회 이상 25kg 이상 물체 리프팅"
+    };
+
+    function switchTab(tabId) {
+        const triggerEl = document.getElementById(tabId);
+        if (triggerEl) {
+            const tab = new bootstrap.Tab(triggerEl);
+            tab.show();
+            window.scrollTo(0, 0);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const step2Tab = document.getElementById('step2-tab');
+        const step3Tab = document.getElementById('step3-tab');
+        if(step2Tab) { step2Tab.addEventListener('shown.bs.tab', renderStep2); }
+        if(step3Tab) { step3Tab.addEventListener('shown.bs.tab', renderStep3); }
+        addProcessBlock();
+    });
+
+    function addProcessBlock() {
+        processIdx++;
+        const container = document.getElementById('processMasterContainer');
+        const div = document.createElement('div');
+        div.className = 'card p-4 process-master-card';
+        div.id = `pCard_${processIdx}`;
+        div.setAttribute('data-p-idx', processIdx);
+        div.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                <span class="fw-bold text-primary fs-5">🏢 공정 세트 #${processIdx}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('pCard_${processIdx}').remove()">공정 삭제</button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4"> <label class="form-label fw-bold">공정명</label> <input type="text" class="form-control p-name" placeholder="의자 조립 라인"> </div>
+                <div class="col-md-3"> <label class="form-label text-secondary fw-bold">근로자 성명</label> <input type="text" class="form-control p-worker" placeholder="홍길동"> </div>
+                <div class="col-md-3"> <label class="form-label text-secondary fw-bold">소속 부서/반</label> <input type="text" class="form-control p-dept" placeholder="조립2반"> </div>
+                <div class="col-md-2"> <label class="form-label text-secondary fw-bold">해당경력(년)</label> <input type="number" class="form-control p-exp" value="0"> </div>
+            </div>`;
+        container.appendChild(div);
+    }
+
+    function renderStep2() {
+        const pCards = document.querySelectorAll('.process-master-card');
+        const container = document.getElementById('processTasksContainer');
+        const oldDataMap = {};
+        container.querySelectorAll('.p-task-group').forEach(group => {
+            const idx = group.getAttribute('data-p-idx');
+            oldDataMap[idx] = Array.from(group.querySelectorAll('.unit-task-title')).map(input => input.value);
+        });
+        container.innerHTML = '';
+        if(pCards.length === 0) {
+            container.innerHTML = '<div class="alert alert-warning text-center fw-bold">Step 1에서 공정을 추가해야 합니다.</div>';
+            return;
+        }
+        pCards.forEach((card) => {
+            const idx = card.getAttribute('data-p-idx');
+            const pName = card.querySelector('.p-name').value.trim() || `미지정 공정 #${idx}`;
+            const pWorker = card.querySelector('.p-worker').value.trim() || '미입력';
+            const savedTitles = oldDataMap[idx] || ["", ""]; 
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'mb-3 border rounded bg-white p-task-group';
+            groupDiv.setAttribute('data-p-idx', idx); groupDiv.setAttribute('data-p-name', pName);
+
+            let rowsHtml = '';
+            savedTitles.forEach((tTitle, rIdx) => {
+                rowsHtml += `
+                    <div class="input-group mb-2 p-task-row">
+                        <span class="input-group-text fw-bold">${rIdx + 1}</span>
+                        <input type="text" class="form-control unit-task-title" value="${tTitle}" placeholder="단위작업명 입력">
+                        <button class="btn btn-outline-danger" type="button" onclick="this.closest('.p-task-row').remove(); reindexRows(${idx});">삭제</button>
+                    </div>`;
+            });
+            groupDiv.innerHTML = `
+                <button class="btn btn-light process-toggle-btn border-bottom rounded-top text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_p_${idx}">
+                    <span>🏢 공정명: <strong class="text-dark">${pName}</strong> <small class="text-muted ms-2">(근로자: ${pWorker})</small></span>
+                    <span class="text-muted small">▼ 터치하여 단위작업 편집</span>
+                </button>
+                <div class="collapse p-3" id="collapse_p_${idx}">
+                    <div class="task-rows-container" id="rowsContainer_${idx}">${rowsHtml}</div>
+                    <button type="button" class="btn btn-outline-success btn-sm mt-2 fw-bold" onclick="addTaskRowToProcess(${idx})">+ 단위작업 추가</button>
+                </div>`;
+            container.appendChild(groupDiv);
+        });
+    }
+
+    function addTaskRowToProcess(pIdx) {
+        const container = document.getElementById(`rowsContainer_${pIdx}`);
+        const rCount = container.querySelectorAll('.p-task-row').length + 1;
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2 p-task-row';
+        div.innerHTML = `
+            <span class="input-group-text fw-bold">${rCount}</span>
+            <input type="text" class="form-control unit-task-title" placeholder="단위작업명 입력">
+            <button class="btn btn-outline-danger" type="button" onclick="this.closest('.p-task-row').remove(); reindexRows(${pIdx});">삭제</button>`;
+        container.appendChild(div);
+    }
+
+    function reindexRows(pIdx) {
+        document.querySelectorAll(`#rowsContainer_${pIdx} .p-task-row`).forEach((row, rIdx) => {
+            row.querySelector('.input-group-text').innerText = rIdx + 1;
+        });
+    }
+
+    function renderStep3() {
+        const container = document.getElementById('finalInvestigationContainer');
+        container.innerHTML = '';
+        const taskGroups = document.querySelectorAll('.p-task-group');
+        let totalInvestigationCards = 0;
+
+        taskGroups.forEach(group => {
+            const pIdx = group.getAttribute('data-p-idx');
+            const pName = group.getAttribute('data-p-name');
+            const taskInputs = group.querySelectorAll('.unit-task-title');
+            const sectionHeader = document.createElement('h4');
+            sectionHeader.className = 'fw-bold mt-4 mb-3 text-dark border-bottom pb-2';
+            sectionHeader.innerHTML = `🏢 공정 대분류: <span class="text-primary">${pName}</span>`;
+            let hasValidTask = false;
+            const subContainer = document.createElement('div');
+
+            taskInputs.forEach((input, tIdx) => {
+                const tName = input.value.trim(); if(!tName) return;
+                hasValidTask = true; totalInvestigationCards++;
+                const uniqueId = `${pIdx}_${tIdx}`;
+                const card = document.createElement('div');
+                card.className = 'card p-4 task-investigate-card';
+                card.id = `finalCard_${uniqueId}`;
+                card.setAttribute('data-p-idx', pIdx); card.setAttribute('data-p-name', pName); card.setAttribute('data-task-name', tName);
+                card.innerHTML = `
+                    <h6 class="fw-bold text-success mb-3">➔ 단위작업: <span class="text-dark">${tName}</span></h6>
+                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                        <div class="col-6 col-md-4"> <label class="form-label small">1회 작업 주기(초)</label> <input type="number" class="form-control c-cycle" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
+                        <div class="col-6 col-md-4"> <label class="form-label small">하루 작업 횟수(회)</label> <input type="number" class="form-control c-freq" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
+                        <div class="col-12 col-md-4"> <label class="form-label small text-primary fw-bold">추정 일일 작업시간</label> <div class="form-control form-control-sm bg-white fw-bold" id="cTimeText_${uniqueId}">0시간 0분</div> <input type="hidden" id="cMinHidden_${uniqueId}" value="0"> </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <span class="fw-bold d-block mb-2 small text-secondary">🧍 신체 부담 자세 체크</span>
+                            <div class="p-2 border rounded mb-2" style="max-height:180px; overflow-y:auto; background:#fafafa;">
+                                ${[1,2,3,4,5,6,7,8,9,10].map(c => `
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input chk-final-${uniqueId}" type="checkbox" value="${c}" id="chk_${uniqueId}_${c}" onchange="calcFinalDiagnosis('${uniqueId}')">
+                                        <label class="form-check-label" style="font-size:12px;" for="chk_${uniqueId}_${c}">${burdenDefinitions[c]}</label>
+                                    </div>`).join('')}
+                            </div>
+                            <div class="row align-items-center">
+                                <div class="col-7"><label class="col-form-label col-form-label-sm fw-bold">취급 최대 중량 (kg)</label></div>
+                                <div class="col-5"><input type="number" class="form-control form-control-sm c-weight" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="fw-bold d-block mb-2 small text-secondary">📸 현장 카메라 샷 연동</span>
+                            <div class="p-3 border rounded bg-white">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6"><label class="btn btn-outline-primary btn-sm w-100 fw-bold">📷 사진 촬영 <input type="file" class="d-none" accept="image/*" capture="camera" onchange="captureMedia(this, 'img_${uniqueId}', 'con_img_${uniqueId}')"></label></div>
+                                    <div class="col-6"><label class="btn btn-outline-info btn-sm w-100 fw-bold">🎥 동영상 촬영 <input type="file" class="d-none" accept="video/*" capture="camera" onchange="captureMedia(this, 'vid_${uniqueId}', 'con_vid_${uniqueId}')"></label></div>
+                                </div>
+                                <div class="media-preview-container" id="con_img_${uniqueId}"><button type="button" class="delete-media-btn" onclick="deleteMedia('img_${uniqueId}', 'con_img_${uniqueId}')">삭제</button><img id="img_${uniqueId}" class="preview-media"></div>
+                                <div class="media-preview-container" id="con_vid_${uniqueId}"><button type="button" class="delete-media-btn" onclick="deleteMedia('vid_${uniqueId}', 'con_vid_${uniqueId}')">삭제</button><video id="vid_${uniqueId}" class="preview-media" controls></video></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-box mt-3"><div id="cDiagResult_${uniqueId}" class="fw-bold text-muted small">주기와 회수를 입력하면 판정이 활성화됩니다.</div></div>`;
+                subContainer.appendChild(card);
+            });
+            if(hasValidTask) { container.appendChild(sectionHeader); container.appendChild(subContainer); }
+        });
+        if(totalInvestigationCards === 0) container.innerHTML = `<div class="alert alert-danger text-center fw-bold my-4">Step 2에서 공정별로 단위작업 내용을 기입해야 합니다.</div>`;
+    }
+
+    function captureMedia(input, targetId, containerId) {
+        const file = input.files[0]; const el = document.getElementById(targetId); const con = document.getElementById(containerId);
+        if(file && el && con) {
+            const reader = new FileReader();
+            reader.onload = function(e) { el.src = e.target.result; con.style.display = 'block'; el.setAttribute('data-base64', e.target.result); }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function deleteMedia(targetId, containerId) {
+        const el = document.getElementById(targetId); const con = document.getElementById(containerId);
+        if(el && con) { el.removeAttribute('data-base64'); el.src = ''; con.style.display = 'none'; }
+    }
+
+    function calcFinalDiagnosis(uId) {
+        const card = document.getElementById(`finalCard_${uId}`); if(!card) return;
+        const cycle = parseFloat(card.querySelector('.c-cycle').value) || 0;
+        const freq = parseFloat(card.querySelector('.c-freq').value) || 0;
+        const weight = parseFloat(card.querySelector('.c-weight').value) || 0;
+        const totalMins = Math.round((cycle * freq) / 60);
+        card.querySelector(`#cMinHidden_${uId}`).value = totalMins;
+        card.querySelector(`#cTimeText_${uId}`).innerText = `${Math.floor(totalMins/60)}시간 ${totalMins%60}분 (${totalMins}분)`;
+
+        let matched = [];
+        card.querySelectorAll(`.chk-final-${uId}:checked`).forEach(cb => {
+            const val = parseInt(cb.value);
+            if((val === 1 || val === 4) && totalMins >= 240) matched.push(val);
+            if([2,3,5,6,7,8,9,10].includes(val) && totalMins >= 120) matched.push(val);
+        });
+        if(weight >= 25 && freq >= 10) matched.push(11);
+
+        const resDiv = card.querySelector(`#cDiagResult_${uId}`);
+        if(matched.length > 0) resDiv.innerHTML = `⚠️ <span class="text-danger fw-bold">법적 부담작업 해당공정 감지:</span><br>` + matched.map(m => ` <span class="badge bg-danger me-1 mt-1">${burdenDefinitions[m]}</span>`).join('');
+        else resDiv.innerHTML = totalMins === 0 ? "주기와 회수를 입력하면 판정이 활성화됩니다." : "✅ 노출 수치 기준 미달로 본 작업은 고시 기준 미해당 상태입니다.";
+    }
+
+    function collectFullDataset() {
+        const mainDataset = { master_meta: { survey_date: document.getElementById('masterDate').value, inspector: document.getElementById('masterInspector').value, exported_at: new Date().toISOString() }, processes: [] };
+        document.querySelectorAll('.process-master-card').forEach(pCard => {
+            const pIdx = pCard.getAttribute('data-p-idx');
+            const processData = { process_name: pCard.querySelector('.p-name').value || `미지정 공정_${pIdx}`, worker_info: { name: pCard.querySelector('.p-worker').value, department: pCard.querySelector('.p-dept').value, experience_years: parseInt(pCard.querySelector('.p-exp').value) || 0 }, investigations: [] };
+            
+            document.querySelectorAll(`.task-investigate-card[data-p-idx="${pIdx}"]`).forEach(card => {
+                const uId = card.id.split('_').slice(1).join('_');
+                const totalMins = parseInt(card.querySelector(`#cMinHidden_${uId}`).value) || 0;
+                const weight = parseFloat(card.querySelector('.c-weight').value) || 0;
+                const freq = parseFloat(card.querySelector('.c-freq').value) || 0;
+                let clauses = [];
+                card.querySelectorAll(`.chk-final-${uId}:checked`).forEach(cb => {
+                    const v = parseInt(cb.value);
+                    if((v === 1 || v === 4) && totalMins >= 240) clauses.push(v);
+                    if([2,3,5,6,7,8,9,10].includes(v) && totalMins >= 120) clauses.push(v);
+                });
+                if(weight >= 25 && freq >= 10) clauses.push(11);
+                const imgEl = card.querySelector(`#img_${uId}`); const vidEl = card.querySelector(`#vid_${uId}`);
+
+                processData.investigations.push({ unit_task_name: card.getAttribute('data-task-name'), time_metrics: { cycle_time_sec: parseFloat(card.querySelector('.c-cycle').value) || 0, daily_frequency: freq, total_calculated_minutes: totalMins }, risk_parameters: { max_weight_kg: weight, checked_postures: Array.from(card.querySelectorAll(`.chk-final-${uId}:checked`)).map(cb => parseInt(cb.value)) }, verdict: { is_burden_task: clauses.length > 0, matched_clauses: clauses }, media: { photo_data: imgEl ? imgEl.getAttribute('data-base64') || "" : "", video_data: vidEl ? vidEl.getAttribute('data-base64') || "" : "" } });
+            });
+            mainDataset.processes.push(processData);
+        });
+        return mainDataset;
+    }
+
+    function exportData(type) {
+        const finalData = collectFullDataset(); if(finalData.processes.length === 0) { alert("공정 데이터를 추가하셔야 합니다."); return; }
+        const jsonStr = JSON.stringify(finalData, null, 2);
+        if(type === 'download') {
+            const blob = new Blob([jsonStr], { type: "application/json" }); const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `근골격계_종합조사_${finalData.master_meta.survey_date}.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        } else if(type === 'email') {
+            const email = "total-safety@company.com"; const subject = `[통합PWA앱] 근골격계 유해요인 조사 결과`;
+            let bodyText = `■ 근골격계 멀티 공정 통합 조사 요약 보고\n\n`;
+            finalData.processes.forEach(p => {
+                bodyText += `▶ [공정] ${p.process_name} (근로자: ${p.worker_info.name || '미입력'})\n`;
+                p.investigations.forEach(ins => { bodyText += `  - 단위작업: ${ins.unit_task_name} ➔ 판정: ${ins.verdict.is_burden_task ? '★대상★ (' + ins.verdict.matched_clauses.join(', ') + '호)' : '미해당'}\n`; });
+            });
+            bodyText += `\n[RAW JSON DATA]\n` + jsonStr;
+            window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+        }
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

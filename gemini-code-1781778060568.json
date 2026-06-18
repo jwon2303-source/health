@@ -1,0 +1,16 @@
+{
+  "name": "근골격계 유해요인 스마트 조사 시스템",
+  "short_name": "근골격계조사",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f1f3f5",
+  "theme_color": "#212529",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063175.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
