@@ -14,8 +14,12 @@
         .nav-pills .nav-link { font-weight: bold; padding: 12px; border-radius: 8px; color: #555; background: #e9ecef; margin-right: 5px; }
         .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
         .process-master-card { border-left: 6px solid #0d6efd; background: #ffffff; }
-        .process-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 14px 20px; border-radius: 8px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .task-investigate-card { border-top: 4px solid #198754; background: #ffffff; }
+        
+        /* 아코디언 전용 커스텀 스타일 */
+        .process-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 14px 20px; border-radius: 8px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #dee2e6; }
+        .task-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 10px 15px; border-radius: 6px; font-size: 13.5px; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border: 1px solid #e9ecef; }
+        
+        .task-investigate-card { background: #ffffff; border: 1px solid #dee2e6; border-radius: 0 0 8px 8px; border-top: none; }
         .result-box { background-color: #fff3cd; border: 1px solid #ffeba2; border-radius: 8px; padding: 12px; }
         .media-preview-container { position: relative; margin-top: 10px; display: none; background: #000; border-radius: 8px; overflow: hidden; }
         .preview-media { width: 100%; max-height: 180px; object-fit: contain; display: block; }
@@ -25,11 +29,13 @@
 <body>
 
 <div class="container my-4" style="max-width: 1000px;">
+    <!-- 타이틀 바 -->
     <div class="card p-3 bg-dark text-white text-center mb-4">
         <h3 class="mb-1 fw-bold text-info">근골격계 유해요인 멀티 공정 조사 시스템</h3>
-        <p class="mb-0 text-white-50">태블릿 앱(PWA) 버전 · 카메라 직찍 · 부담작업 자동 판정</p>
+        <p class="mb-0 text-white-50">태블릿 앱(PWA) 버전 · 계층형 아코디언 UI · 부담작업 자동 판정</p>
     </div>
 
+    <!-- 탭 내비게이션 -->
     <ul class="nav nav-pills nav-justified mb-4" id="surveyTabs" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button">Step 1. 조사 대상 공정 목록 구성</button>
@@ -42,6 +48,7 @@
         </li>
     </ul>
 
+    <!-- 마스터 메타 정보 -->
     <div class="card p-3 mb-3 bg-white border">
         <div class="row g-2">
             <div class="col-6 col-md-4">
@@ -57,6 +64,7 @@
 
     <div class="tab-content" id="surveyTabsContent">
         
+        <!-- [Step 1] 복수 공정 구성 -->
         <div class="tab-pane fade show active" id="step1">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold text-secondary mb-0">🏢 오늘 조사할 공정들을 추가하세요</h5>
@@ -68,6 +76,7 @@
             </div>
         </div>
 
+        <!-- [Step 2] 단위작업 빌드 (아코디언) -->
         <div class="tab-pane fade" id="step2">
             <div class="card p-4">
                 <h5 class="fw-bold text-dark mb-2">📋 공정별 업무 흐름(단위작업) 받아적기</h5>
@@ -81,6 +90,7 @@
             </div>
         </div>
 
+        <!-- [Step 3] 통합 정량 조사 (공정 -> 단위작업 2중 아코디언 개편) -->
         <div class="tab-pane fade" id="step3">
             <div id="finalInvestigationContainer"></div>
             <div class="card p-3 bg-light">
@@ -98,12 +108,9 @@
 </div>
 
 <script>
-    // PWA 서비스 워커 등록 스크립트
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('PWA Service Worker 등록 성공:', reg.scope))
-                .catch(err => console.log('PWA Service Worker 등록 실패:', err));
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
         });
     }
 
@@ -218,70 +225,101 @@
         });
     }
 
+    // Step 3 렌더링: [공정 버튼] -> 누르면 [단위작업 목록 버튼] -> 누르면 [세부조사 폼] 2중 계층 구조
     function renderStep3() {
         const container = document.getElementById('finalInvestigationContainer');
         container.innerHTML = '';
         const taskGroups = document.querySelectorAll('.p-task-group');
         let totalInvestigationCards = 0;
 
-        taskGroups.forEach(group => {
+        if (taskGroups.length === 0) {
+            container.innerHTML = `<div class="alert alert-danger text-center fw-bold my-4">조사할 공정이 없습니다.</div>`;
+            return;
+        }
+
+        taskGroups.forEach((group, gIdx) => {
             const pIdx = group.getAttribute('data-p-idx');
             const pName = group.getAttribute('data-p-name');
             const taskInputs = group.querySelectorAll('.unit-task-title');
-            const sectionHeader = document.createElement('h4');
-            sectionHeader.className = 'fw-bold mt-4 mb-3 text-dark border-bottom pb-2';
-            sectionHeader.innerHTML = `🏢 공정 대분류: <span class="text-primary">${pName}</span>`;
-            let hasValidTask = false;
-            const subContainer = document.createElement('div');
+            
+            // 공정 마스터 카드 (접이식 틀)
+            const processMasterWrapper = document.createElement('div');
+            processMasterWrapper.className = 'mb-4 border rounded bg-white';
+            
+            // 공정 대분류 토글 버튼
+            processMasterWrapper.innerHTML = `
+                <button class="btn btn-dark process-toggle-btn rounded-top" type="button" data-bs-toggle="collapse" data-bs-target="#step3_collapse_p_${pIdx}">
+                    <span>🏢 공정 대분류: <strong>${pName}</strong></span>
+                    <span class="small text-info">▼ 단위작업 목록 열기</span>
+                </button>
+                <div class="collapse p-3" id="step3_collapse_p_${pIdx}">
+                    <div id="step3_tasks_container_${pIdx}" class="d-flex flex-column gap-2"></div>
+                </div>
+            `;
+            
+            container.appendChild(processMasterWrapper);
+            const tasksContainer = document.getElementById(`step3_tasks_container_${pIdx}`);
 
             taskInputs.forEach((input, tIdx) => {
                 const tName = input.value.trim(); if(!tName) return;
-                hasValidTask = true; totalInvestigationCards++;
+                totalInvestigationCards++;
                 const uniqueId = `${pIdx}_${tIdx}`;
-                const card = document.createElement('div');
-                card.className = 'card p-4 task-investigate-card';
-                card.id = `finalCard_${uniqueId}`;
-                card.setAttribute('data-p-idx', pIdx); card.setAttribute('data-p-name', pName); card.setAttribute('data-task-name', tName);
-                card.innerHTML = `
-                    <h6 class="fw-bold text-success mb-3">➔ 단위작업: <span class="text-dark">${tName}</span></h6>
-                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
-                        <div class="col-6 col-md-4"> <label class="form-label small">1회 작업 주기(초)</label> <input type="number" class="form-control c-cycle" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
-                        <div class="col-6 col-md-4"> <label class="form-label small">하루 작업 횟수(회)</label> <input type="number" class="form-control c-freq" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
-                        <div class="col-12 col-md-4"> <label class="form-label small text-primary fw-bold">추정 일일 작업시간</label> <div class="form-control form-control-sm bg-white fw-bold" id="cTimeText_${uniqueId}">0시간 0분</div> <input type="hidden" id="cMinHidden_${uniqueId}" value="0"> </div>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <span class="fw-bold d-block mb-2 small text-secondary">🧍 신체 부담 자세 체크</span>
-                            <div class="p-2 border rounded mb-2" style="max-height:180px; overflow-y:auto; background:#fafafa;">
-                                ${[1,2,3,4,5,6,7,8,9,10].map(c => `
-                                    <div class="form-check mb-1">
-                                        <input class="form-check-input chk-final-${uniqueId}" type="checkbox" value="${c}" id="chk_${uniqueId}_${c}" onchange="calcFinalDiagnosis('${uniqueId}')">
-                                        <label class="form-check-label" style="font-size:12px;" for="chk_${uniqueId}_${c}">${burdenDefinitions[c]}</label>
-                                    </div>`).join('')}
-                            </div>
-                            <div class="row align-items-center">
-                                <div class="col-7"><label class="col-form-label col-form-label-sm fw-bold">취급 최대 중량 (kg)</label></div>
-                                <div class="col-5"><input type="number" class="form-control form-control-sm c-weight" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"></div>
-                            </div>
+
+                // 단위작업 토글 버튼 및 세부내용 카드 세트
+                const taskItemWrapper = document.createElement('div');
+                taskItemWrapper.className = 'border rounded overflow-hidden';
+                
+                taskItemWrapper.innerHTML = `
+                    <!-- 단위작업명 토글 버튼 -->
+                    <button class="btn task-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#step3_collapse_task_${uniqueId}">
+                        <span>➔ 단위작업: <strong class="text-success">${tName}</strong></span>
+                        <span class="text-muted small" id="badge_status_${uniqueId}">⏱️ 입력 대기 중</span>
+                    </button>
+                    
+                    <!-- 세부내용 입력 폼 (접히는 구역) -->
+                    <div class="collapse p-3 task-investigate-card" id="step3_collapse_task_${uniqueId}" data-p-idx="${pIdx}" data-p-name="${pName}" data-task-name="${tName}">
+                        <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                            <div class="col-6 col-md-4"> <label class="form-label small">1회 작업 주기(초)</label> <input type="number" class="form-control c-cycle" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
+                            <div class="col-6 col-md-4"> <label class="form-label small">하루 작업 횟수(회)</label> <input type="number" class="form-control c-freq" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
+                            <div class="col-12 col-md-4"> <label class="form-label small text-primary fw-bold">추정 일일 작업시간</label> <div class="form-control form-control-sm bg-white fw-bold" id="cTimeText_${uniqueId}">0시간 0분</div> <input type="hidden" id="cMinHidden_${uniqueId}" value="0"> </div>
                         </div>
-                        <div class="col-md-6">
-                            <span class="fw-bold d-block mb-2 small text-secondary">📸 현장 카메라 샷 연동</span>
-                            <div class="p-3 border rounded bg-white">
-                                <div class="row g-2 mb-2">
-                                    <div class="col-6"><label class="btn btn-outline-primary btn-sm w-100 fw-bold">📷 사진 촬영 <input type="file" class="d-none" accept="image/*" capture="camera" onchange="captureMedia(this, 'img_${uniqueId}', 'con_img_${uniqueId}')"></label></div>
-                                    <div class="col-6"><label class="btn btn-outline-info btn-sm w-100 fw-bold">🎥 동영상 촬영 <input type="file" class="d-none" accept="video/*" capture="camera" onchange="captureMedia(this, 'vid_${uniqueId}', 'con_vid_${uniqueId}')"></label></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <span class="fw-bold d-block mb-2 small text-secondary">🧍 신체 부담 자세 체크</span>
+                                <div class="p-2 border rounded mb-2" style="max-height:180px; overflow-y:auto; background:#fafafa;">
+                                    ${[1,2,3,4,5,6,7,8,9,10].map(c => `
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input chk-final-${uniqueId}" type="checkbox" value="${c}" id="chk_${uniqueId}_${c}" onchange="calcFinalDiagnosis('${uniqueId}')">
+                                            <label class="form-check-label" style="font-size:12px;" for="chk_${uniqueId}_${c}">${burdenDefinitions[c]}</label>
+                                        </div>`).join('')}
                                 </div>
-                                <div class="media-preview-container" id="con_img_${uniqueId}"><button type="button" class="delete-media-btn" onclick="deleteMedia('img_${uniqueId}', 'con_img_${uniqueId}')">삭제</button><img id="img_${uniqueId}" class="preview-media"></div>
-                                <div class="media-preview-container" id="con_vid_${uniqueId}"><button type="button" class="delete-media-btn" onclick="deleteMedia('vid_${uniqueId}', 'con_vid_${uniqueId}')">삭제</button><video id="vid_${uniqueId}" class="preview-media" controls></video></div>
+                                <div class="row align-items-center">
+                                    <div class="col-7"><label class="col-form-label col-form-label-sm fw-bold">취급 최대 중량 (kg)</label></div>
+                                    <div class="col-5"><input type="number" class="form-control form-control-sm c-weight" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <span class="fw-bold d-block mb-2 small text-secondary">📸 현장 카메라 샷 연동</span>
+                                <div class="p-3 border rounded bg-white">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6"><label class="btn btn-outline-primary btn-sm w-100 fw-bold">📷 사진 촬영 <input type="file" class="d-none" accept="image/*" capture="camera" onchange="captureMedia(this, 'img_${uniqueId}', 'con_img_${uniqueId}')"></label></div>
+                                        <div class="col-6"><label class="btn btn-outline-info btn-sm w-100 fw-bold">🎥 동영상 촬영 <input type="file" class="d-none" accept="video/*" capture="camera" onchange="captureMedia(this, 'vid_${uniqueId}', 'con_vid_${uniqueId}')"></label></div>
+                                    </div>
+                                    <div class="media-preview-container" id="con_img_${uniqueId}"><button type="button" class="delete-media-btn" onclick="deleteMedia('img_${uniqueId}', 'con_img_${uniqueId}')">삭제</button><img id="img_${uniqueId}" class="preview-media"></div>
+                                    <div class="media-preview-container" id="con_vid_${uniqueId}"><button type="button" class="delete-media-btn" onclick="deleteMedia('vid_${uniqueId}', 'con_vid_${uniqueId}')">삭제</button><video id="vid_${uniqueId}" class="preview-media" controls></video></div>
+                                </div>
                             </div>
                         </div>
+                        <div class="result-box mt-3"><div id="cDiagResult_${uniqueId}" class="fw-bold text-muted small">주기와 회수를 입력하면 판정이 활성화됩니다.</div></div>
                     </div>
-                    <div class="result-box mt-3"><div id="cDiagResult_${uniqueId}" class="fw-bold text-muted small">주기와 회수를 입력하면 판정이 활성화됩니다.</div></div>`;
-                subContainer.appendChild(card);
+                `;
+                tasksContainer.appendChild(taskItemWrapper);
             });
-            if(hasValidTask) { container.appendChild(sectionHeader); container.appendChild(subContainer); }
         });
-        if(totalInvestigationCards === 0) container.innerHTML = `<div class="alert alert-danger text-center fw-bold my-4">Step 2에서 공정별로 단위작업 내용을 기입해야 합니다.</div>`;
+
+        if(totalInvestigationCards === 0) {
+            container.innerHTML = `<div class="alert alert-danger text-center fw-bold my-4">Step 2에서 공정별로 단위작업 내용을 최소 1개 이상 기입해야 합니다.</div>`;
+        }
     }
 
     function captureMedia(input, targetId, containerId) {
@@ -299,11 +337,12 @@
     }
 
     function calcFinalDiagnosis(uId) {
-        const card = document.getElementById(`finalCard_${uId}`); if(!card) return;
+        const card = document.getElementById(`step3_collapse_task_${uId}`); if(!card) return;
         const cycle = parseFloat(card.querySelector('.c-cycle').value) || 0;
         const freq = parseFloat(card.querySelector('.c-freq').value) || 0;
         const weight = parseFloat(card.querySelector('.c-weight').value) || 0;
         const totalMins = Math.round((cycle * freq) / 60);
+        
         card.querySelector(`#cMinHidden_${uId}`).value = totalMins;
         card.querySelector(`#cTimeText_${uId}`).innerText = `${Math.floor(totalMins/60)}시간 ${totalMins%60}분 (${totalMins}분)`;
 
@@ -316,8 +355,20 @@
         if(weight >= 25 && freq >= 10) matched.push(11);
 
         const resDiv = card.querySelector(`#cDiagResult_${uId}`);
-        if(matched.length > 0) resDiv.innerHTML = `⚠️ <span class="text-danger fw-bold">법적 부담작업 해당공정 감지:</span><br>` + matched.map(m => ` <span class="badge bg-danger me-1 mt-1">${burdenDefinitions[m]}</span>`).join('');
-        else resDiv.innerHTML = totalMins === 0 ? "주기와 회수를 입력하면 판정이 활성화됩니다." : "✅ 노출 수치 기준 미달로 본 작업은 고시 기준 미해당 상태입니다.";
+        const badgeStatus = document.getElementById(`badge_status_${uId}`);
+
+        if(matched.length > 0) {
+            resDiv.innerHTML = `⚠️ <span class="text-danger fw-bold">법적 부담작업 해당공정 감지:</span><br>` + matched.map(m => ` <span class="badge bg-danger me-1 mt-1">${burdenDefinitions[m]}</span>`).join('');
+            if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-danger">⚠️ 부담작업 대상</span>`;
+        } else {
+            if(totalMins === 0) {
+                resDiv.innerHTML = "주기와 회수를 입력하면 판정이 활성화됩니다.";
+                if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-secondary">⏱️ 입력 대기 중</span>`;
+            } else {
+                resDiv.innerHTML = "✅ 노출 수치 기준 미달로 본 작업은 고시 기준 미해당 상태입니다.";
+                if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-success">✅ 정상 작업</span>`;
+            }
+        }
     }
 
     function collectFullDataset() {
@@ -327,7 +378,7 @@
             const processData = { process_name: pCard.querySelector('.p-name').value || `미지정 공정_${pIdx}`, worker_info: { name: pCard.querySelector('.p-worker').value, department: pCard.querySelector('.p-dept').value, experience_years: parseInt(pCard.querySelector('.p-exp').value) || 0 }, investigations: [] };
             
             document.querySelectorAll(`.task-investigate-card[data-p-idx="${pIdx}"]`).forEach(card => {
-                const uId = card.id.split('_').slice(1).join('_');
+                const uId = card.id.split('_').slice(2).join('_');
                 const totalMins = parseInt(card.querySelector(`#cMinHidden_${uId}`).value) || 0;
                 const weight = parseFloat(card.querySelector('.c-weight').value) || 0;
                 const freq = parseFloat(card.querySelector('.c-freq').value) || 0;
@@ -366,6 +417,5 @@
         }
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
