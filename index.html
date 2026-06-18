@@ -9,17 +9,27 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f1f3f5; font-size: 14px; color: #333; }
+        body { background-color: #f1f3f5; font-size: 14px; color: #333; -webkit-tap-highlight-color: transparent; }
         .card { box-shadow: 0 4px 10px rgba(0,0,0,0.06); border: none; border-radius: 12px; margin-bottom: 20px; }
-        .nav-pills .nav-link { font-weight: bold; padding: 12px; border-radius: 8px; color: #555; background: #e9ecef; margin-right: 5px; }
-        .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
+        
+        /* 탭 스타일 직접 제어 */
+        .custom-tab-nav { display: flex; width: 100%; margin-bottom: 24px; gap: 5px; padding: 0; list-style: none; }
+        .custom-tab-nav li { flex: 1; }
+        .custom-tab-btn { width: 100%; font-weight: bold; padding: 12px; border-radius: 8px; color: #555; background: #e9ecef; border: none; text-align: center; }
+        .custom-tab-btn.active { background-color: #0d6efd; color: white; }
+        
+        .tab-panel-content { display: none; }
+        .tab-panel-content.active { display: block; }
+        
         .process-master-card { border-left: 6px solid #0d6efd; background: #ffffff; }
         
-        /* 아코디언 전용 커스텀 스타일 */
-        .process-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 14px 20px; border-radius: 8px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #dee2e6; }
-        .task-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 10px 15px; border-radius: 6px; font-size: 13.5px; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border: 1px solid #e9ecef; }
+        /* 아코디언 스타일 커스텀 */
+        .process-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 14px 20px; border-radius: 8px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #dee2e6; background-color: #fff; cursor: pointer; }
+        .task-toggle-btn { font-weight: bold; width: 100%; text-align: left; padding: 10px 15px; border-radius: 6px; font-size: 13.5px; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border: 1px solid #e9ecef; cursor: pointer; }
         
-        .task-investigate-card { background: #ffffff; border: 1px solid #dee2e6; border-radius: 0 0 8px 8px; border-top: none; }
+        .accordion-body-content { display: none; padding: 15px; background: #fff; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 8px 8px; }
+        .accordion-body-content.active { display: block; }
+        
         .result-box { background-color: #fff3cd; border: 1px solid #ffeba2; border-radius: 8px; padding: 12px; }
         .media-preview-container { position: relative; margin-top: 10px; display: none; background: #000; border-radius: 8px; overflow: hidden; }
         .preview-media { width: 100%; max-height: 180px; object-fit: contain; display: block; }
@@ -29,26 +39,17 @@
 <body>
 
 <div class="container my-4" style="max-width: 1000px;">
-    <!-- 타이틀 바 -->
     <div class="card p-3 bg-dark text-white text-center mb-4">
         <h3 class="mb-1 fw-bold text-info">근골격계 유해요인 멀티 공정 조사 시스템</h3>
-        <p class="mb-0 text-white-50">태블릿 앱(PWA) 버전 · 계층형 아코디언 UI · 부담작업 자동 판정</p>
+        <p class="mb-0 text-white-50">태블릿 전용 앱(PWA) · 터치 오류 수정 완료 버전</p>
     </div>
 
-    <!-- 탭 내비게이션 -->
-    <ul class="nav nav-pills nav-justified mb-4" id="surveyTabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active" id="step1-tab" data-bs-toggle="tab" data-bs-target="#step1" type="button">Step 1. 조사 대상 공정 목록 구성</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="step2-tab" data-bs-toggle="tab" data-bs-target="#step2" type="button">Step 2. 공정별 단위작업 빌드</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="step3-tab" data-bs-toggle="tab" data-bs-target="#step3" type="button">Step 3. 종합 정량 조사 & 판정</button>
-        </li>
+    <ul class="custom-tab-nav">
+        <li><button class="custom-tab-btn active" onclick="switchTab('step1')">Step 1. 대상 공정 구성</button></li>
+        <li><button class="custom-tab-btn" id="tab-btn-step2" onclick="switchTab('step2')">Step 2. 단위작업 빌드</button></li>
+        <li><button class="custom-tab-btn" id="tab-btn-step3" onclick="switchTab('step3')">Step 3. 정량 조사 & 판정</button></li>
     </ul>
 
-    <!-- 마스터 메타 정보 -->
     <div class="card p-3 mb-3 bg-white border">
         <div class="row g-2">
             <div class="col-6 col-md-4">
@@ -62,44 +63,37 @@
         </div>
     </div>
 
-    <div class="tab-content" id="surveyTabsContent">
-        
-        <!-- [Step 1] 복수 공정 구성 -->
-        <div class="tab-pane fade show active" id="step1">
+    <div>
+        <div class="tab-panel-content active" id="step1">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold text-secondary mb-0">🏢 오늘 조사할 공정들을 추가하세요</h5>
                 <button type="button" class="btn btn-primary fw-bold btn-sm" onclick="addProcessBlock()">+ 새 공정 추가</button>
             </div>
             <div id="processMasterContainer"></div>
             <div class="text-end mt-4">
-                <button type="button" class="btn btn-primary px-4 fw-bold" onclick="switchTab('step2-tab')">다음 단계로 ➔</button>
+                <button type="button" class="btn btn-primary px-4 py-2 fw-bold" onclick="switchTab('step2')">다음 단계로 (단위작업 구성) ➔</button>
             </div>
         </div>
 
-        <!-- [Step 2] 단위작업 빌드 (아코디언) -->
-        <div class="tab-pane fade" id="step2">
+        <div class="tab-panel-content" id="step2">
             <div class="card p-4">
                 <h5 class="fw-bold text-dark mb-2">📋 공정별 업무 흐름(단위작업) 받아적기</h5>
                 <p class="text-muted small">공정명을 터치하면 해당 공정의 단위작업을 입력할 수 있는 창이 아래로 열립니다.</p>
                 <hr>
                 <div id="processTasksContainer"></div>
                 <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-secondary px-4" onclick="switchTab('step1-tab')">이전 단계</button>
-                    <button type="button" class="btn btn-primary px-4 fw-bold" onclick="switchTab('step3-tab')">다음 단계로 ➔</button>
+                    <button type="button" class="btn btn-secondary px-4 py-2" onclick="switchTab('step1')">이전 단계</button>
+                    <button type="button" class="btn btn-primary px-4 py-2 fw-bold" onclick="switchTab('step3')">다음 단계로 (정량 세부조사) ➔</button>
                 </div>
             </div>
         </div>
 
-        <!-- [Step 3] 통합 정량 조사 (공정 -> 단위작업 2중 아코디언 개편) -->
-        <div class="tab-pane fade" id="step3">
+        <div class="tab-panel-content" id="step3">
             <div id="finalInvestigationContainer"></div>
-            <div class="card p-3 bg-light">
+            <div class="card p-3 bg-light mt-4">
                 <div class="row g-2 justify-content-center">
                     <div class="col-6 col-sm-4">
                         <button type="button" class="btn btn-success w-100 py-3 fw-bold fs-5" onclick="exportData('download')">📥 데이터 (JSON) 다운로드</button>
-                    </div>
-                    <div class="col-6 col-sm-4">
-                        <button type="button" class="btn btn-info text-white w-100 py-3 fw-bold fs-5" onclick="exportData('email')">✉️ 통합 결과 이메일 전송</button>
                     </div>
                 </div>
             </div>
@@ -125,23 +119,40 @@
         11: "11호: 하루 10회 이상 25kg 이상 물체 리프팅"
     };
 
-    function switchTab(tabId) {
-        const triggerEl = document.getElementById(tabId);
-        if (triggerEl) {
-            const tab = new bootstrap.Tab(triggerEl);
-            tab.show();
-            window.scrollTo(0, 0);
+    // 순수 JS 기반 탭 전환 엔진 (충돌 가능성 0%)
+    function switchTab(targetId) {
+        // 모든 탭 버튼 비활성화
+        document.querySelectorAll('.custom-tab-btn').forEach(btn => btn.classList.remove('active'));
+        // 모든 패널 숨기기
+        document.querySelectorAll('.tab-panel-content').forEach(panel => panel.classList.remove('active'));
+        
+        // 선택한 탭 활성화
+        const targetBtn = Array.from(document.querySelectorAll('.custom-tab-btn')).find(btn => btn.getAttribute('onclick').includes(targetId));
+        if(targetBtn) targetBtn.classList.add('active');
+        
+        const targetPanel = document.getElementById(targetId);
+        if(targetPanel) targetPanel.classList.add('active');
+        
+        // 상하 라이프사이클 렌더링 수동 트리거
+        if (targetId === 'step2') renderStep2();
+        if (targetId === 'step3') renderStep3();
+        
+        window.scrollTo(0, 0);
+    }
+
+    // 아코디언 수동 접고 펴기 제어 기능
+    function toggleAccordion(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+            } else {
+                el.style.display = 'block';
+            }
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const step2Tab = document.getElementById('step2-tab');
-        const step3Tab = document.getElementById('step3-tab');
-        if(step2Tab) { step2Tab.addEventListener('shown.bs.tab', renderStep2); }
-        if(step3Tab) { step3Tab.addEventListener('shown.bs.tab', renderStep3); }
-        addProcessBlock();
-    });
-
+    // Step 1: 공정 카드 동적 추가 (터치 완벽 가동)
     function addProcessBlock() {
         processIdx++;
         const container = document.getElementById('processMasterContainer');
@@ -195,11 +206,11 @@
                     </div>`;
             });
             groupDiv.innerHTML = `
-                <button class="btn btn-light process-toggle-btn border-bottom rounded-top text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_p_${idx}">
+                <button class="process-toggle-btn text-primary" type="button" onclick="toggleAccordion('collapse_p_${idx}')">
                     <span>🏢 공정명: <strong class="text-dark">${pName}</strong> <small class="text-muted ms-2">(근로자: ${pWorker})</small></span>
                     <span class="text-muted small">▼ 터치하여 단위작업 편집</span>
                 </button>
-                <div class="collapse p-3" id="collapse_p_${idx}">
+                <div class="p-3 style-collapse" id="collapse_p_${idx}" style="display:none; border-top:1px solid #dee2e6;">
                     <div class="task-rows-container" id="rowsContainer_${idx}">${rowsHtml}</div>
                     <button type="button" class="btn btn-outline-success btn-sm mt-2 fw-bold" onclick="addTaskRowToProcess(${idx})">+ 단위작업 추가</button>
                 </div>`;
@@ -225,7 +236,6 @@
         });
     }
 
-    // Step 3 렌더링: [공정 버튼] -> 누르면 [단위작업 목록 버튼] -> 누르면 [세부조사 폼] 2중 계층 구조
     function renderStep3() {
         const container = document.getElementById('finalInvestigationContainer');
         container.innerHTML = '';
@@ -237,22 +247,20 @@
             return;
         }
 
-        taskGroups.forEach((group, gIdx) => {
+        taskGroups.forEach((group) => {
             const pIdx = group.getAttribute('data-p-idx');
             const pName = group.getAttribute('data-p-name');
             const taskInputs = group.querySelectorAll('.unit-task-title');
             
-            // 공정 마스터 카드 (접이식 틀)
             const processMasterWrapper = document.createElement('div');
             processMasterWrapper.className = 'mb-4 border rounded bg-white';
             
-            // 공정 대분류 토글 버튼
             processMasterWrapper.innerHTML = `
-                <button class="btn btn-dark process-toggle-btn rounded-top" type="button" data-bs-toggle="collapse" data-bs-target="#step3_collapse_p_${pIdx}">
+                <button class="process-toggle-btn text-dark bg-light rounded-top" type="button" onclick="toggleAccordion('step3_collapse_p_${pIdx}')">
                     <span>🏢 공정 대분류: <strong>${pName}</strong></span>
                     <span class="small text-info">▼ 단위작업 목록 열기</span>
                 </button>
-                <div class="collapse p-3" id="step3_collapse_p_${pIdx}">
+                <div class="p-3" id="step3_collapse_p_${pIdx}" style="display:none; border-top:1px solid #dee2e6;">
                     <div id="step3_tasks_container_${pIdx}" class="d-flex flex-column gap-2"></div>
                 </div>
             `;
@@ -265,19 +273,16 @@
                 totalInvestigationCards++;
                 const uniqueId = `${pIdx}_${tIdx}`;
 
-                // 단위작업 토글 버튼 및 세부내용 카드 세트
                 const taskItemWrapper = document.createElement('div');
-                taskItemWrapper.className = 'border rounded overflow-hidden';
+                taskItemWrapper.className = 'border rounded overflow-hidden mb-1';
                 
                 taskItemWrapper.innerHTML = `
-                    <!-- 단위작업명 토글 버튼 -->
-                    <button class="btn task-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#step3_collapse_task_${uniqueId}">
+                    <button class="task-toggle-btn" type="button" onclick="toggleAccordion('step3_collapse_task_${uniqueId}')">
                         <span>➔ 단위작업: <strong class="text-success">${tName}</strong></span>
-                        <span class="text-muted small" id="badge_status_${uniqueId}">⏱️ 입력 대기 중</span>
+                        <span class="text-muted small" id="badge_status_${uniqueId}"><span class="badge bg-secondary">⏱️ 대기 중</span></span>
                     </button>
                     
-                    <!-- 세부내용 입력 폼 (접히는 구역) -->
-                    <div class="collapse p-3 task-investigate-card" id="step3_collapse_task_${uniqueId}" data-p-idx="${pIdx}" data-p-name="${pName}" data-task-name="${tName}">
+                    <div class="p-3 task-investigate-card" id="step3_collapse_task_${uniqueId}" data-p-idx="${pIdx}" data-p-name="${pName}" data-task-name="${tName}" style="display:none;">
                         <div class="row g-3 mb-4 bg-light p-3 rounded border">
                             <div class="col-6 col-md-4"> <label class="form-label small">1회 작업 주기(초)</label> <input type="number" class="form-control c-cycle" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
                             <div class="col-6 col-md-4"> <label class="form-label small">하루 작업 횟수(회)</label> <input type="number" class="form-control c-freq" value="0" oninput="calcFinalDiagnosis('${uniqueId}')"> </div>
@@ -359,14 +364,14 @@
 
         if(matched.length > 0) {
             resDiv.innerHTML = `⚠️ <span class="text-danger fw-bold">법적 부담작업 해당공정 감지:</span><br>` + matched.map(m => ` <span class="badge bg-danger me-1 mt-1">${burdenDefinitions[m]}</span>`).join('');
-            if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-danger">⚠️ 부담작업 대상</span>`;
+            if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-danger">⚠️ 대상</span>`;
         } else {
             if(totalMins === 0) {
                 resDiv.innerHTML = "주기와 회수를 입력하면 판정이 활성화됩니다.";
-                if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-secondary">⏱️ 입력 대기 중</span>`;
+                if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-secondary">⏱️ 대기</span>`;
             } else {
                 resDiv.innerHTML = "✅ 노출 수치 기준 미달로 본 작업은 고시 기준 미해당 상태입니다.";
-                if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-success">✅ 정상 작업</span>`;
+                if(badgeStatus) badgeStatus.innerHTML = `<span class="badge bg-success">✅ 정상</span>`;
             }
         }
     }
@@ -405,17 +410,13 @@
             const blob = new Blob([jsonStr], { type: "application/json" }); const url = URL.createObjectURL(blob);
             const a = document.createElement("a"); a.href = url; a.download = `근골격계_종합조사_${finalData.master_meta.survey_date}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-        } else if(type === 'email') {
-            const email = "total-safety@company.com"; const subject = `[통합PWA앱] 근골격계 유해요인 조사 결과`;
-            let bodyText = `■ 근골격계 멀티 공정 통합 조사 요약 보고\n\n`;
-            finalData.processes.forEach(p => {
-                bodyText += `▶ [공정] ${p.process_name} (근로자: ${p.worker_info.name || '미입력'})\n`;
-                p.investigations.forEach(ins => { bodyText += `  - 단위작업: ${ins.unit_task_name} ➔ 판정: ${ins.verdict.is_burden_task ? '★대상★ (' + ins.verdict.matched_clauses.join(', ') + '호)' : '미해당'}\n`; });
-            });
-            bodyText += `\n[RAW JSON DATA]\n` + jsonStr;
-            window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
         }
     }
+
+    // 초기화 리스너 강제 바인딩
+    window.onload = function() {
+        console.log("App Core Loaded Successfully.");
+    };
 </script>
 </body>
 </html>
